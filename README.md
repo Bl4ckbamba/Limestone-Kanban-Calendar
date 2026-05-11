@@ -153,6 +153,8 @@ This repository is the deployable Limestone runtime package, not the full privat
 - `Dockerfile` and `docker-compose.yml`: container runtime.
 - `release-manifest.json`: version, source commit, build node version, and packaging timestamp.
 
+More maintainer and operator details are available in `docs/wiki/index.md`.
+
 ## License And Attribution
 
 Limestone is licensed under the Apache License, Version 2.0. See `LICENSE`.

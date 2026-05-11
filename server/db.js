@@ -131,6 +131,11 @@ function parseStoredTimestamp(value) {
   return Number.isNaN(timestamp) ? null : timestamp;
 }
 
+function serializeTimestamp(value) {
+  const timestamp = parseStoredTimestamp(value);
+  return timestamp === null ? null : new Date(timestamp).toISOString();
+}
+
 function migrateLegacyLoginBanExpiries() {
   const legacyBans = db
     .prepare(
@@ -223,8 +228,8 @@ export function serializeProject(row) {
     name: row.name,
     color: row.color || "",
     createdBy: row.created_by,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: serializeTimestamp(row.created_at),
+    updatedAt: serializeTimestamp(row.updated_at),
     totalCards: Number(row.total_cards || 0),
     completedCards: Number(row.completed_cards || 0),
     ongoingCards: Number(row.ongoing_cards || 0)
@@ -237,8 +242,8 @@ export function serializeUser(row) {
     username: row.username,
     isAdmin: Boolean(row.is_admin),
     mustChangePassword: Boolean(row.password_change_required),
-    deletedAt: row.deleted_at || null,
-    createdAt: row.created_at
+    deletedAt: serializeTimestamp(row.deleted_at),
+    createdAt: serializeTimestamp(row.created_at)
   };
 }
 
@@ -249,8 +254,8 @@ export function serializeNote(row) {
     content: row.content ?? "",
     createdBy: row.created_by,
     creatorName: row.creator_name,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    createdAt: serializeTimestamp(row.created_at),
+    updatedAt: serializeTimestamp(row.updated_at)
   };
 }
 
@@ -263,11 +268,11 @@ export function serializeCard(row) {
     status: row.status,
     position: row.position,
     eventDate: row.event_date,
-    flushedAt: row.flushed_at,
+    flushedAt: serializeTimestamp(row.flushed_at),
     createdBy: row.created_by,
     creatorName: row.creator_name,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    createdAt: serializeTimestamp(row.created_at),
+    updatedAt: serializeTimestamp(row.updated_at)
   };
 }
 
@@ -283,7 +288,7 @@ export function serializeAction(row) {
     fromStatus: row.from_status,
     toStatus: row.to_status,
     metadata: JSON.parse(row.metadata_json || "{}"),
-    createdAt: row.created_at
+    createdAt: serializeTimestamp(row.created_at)
   };
 }
 
@@ -305,7 +310,7 @@ export function serializeCalendarEvent(row) {
     repeatEndDate: row.repeat_end_date || "",
     repeatCount: row.repeat_count,
     createdBy: row.created_by,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    createdAt: serializeTimestamp(row.created_at),
+    updatedAt: serializeTimestamp(row.updated_at)
   };
 }
