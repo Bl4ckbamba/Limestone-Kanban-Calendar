@@ -1,10 +1,20 @@
-# Limestone: Kanban/Calendar
+# Limestone
 
-Limestone is a self-hosted kanban and calendar app for small teams and personal operations. This public repository contains the Docker-ready runtime package: the built frontend, the Node/Express server, SQLite persistence, and the files needed to clone, configure, and run it on a VPS.
+Limestone is a self-hosted kanban, calendar, and notes workspace for small teams that want their work in one calm place. It gives you project boards, scheduled work, team notes, account management, themes, and realtime updates without sending your data to a hosted SaaS product.
 
-## Screenshots
+It is built for the kind of team that wants something simple enough to run on a VPS, but polished enough to use every day.
+
+## App Tour
+
+### Organize Work
+
+Start with a focused kanban board for daily execution. Create cards, move work through planned, ongoing, and finished states, and keep each project easy to scan.
 
 ![Organize your tasks](screenshots/organize-your-tasks.png)
+
+### Plan Across Time
+
+Use the calendar when work needs a date, a time window, or a bigger planning view. Limestone includes month, week, and day layouts so the same work can be reviewed at different levels of detail.
 
 <p>
   <img src="screenshots/plan-your-month.png" alt="Plan your month" width="49%">
@@ -12,33 +22,71 @@ Limestone is a self-hosted kanban and calendar app for small teams and personal 
 </p>
 
 <p>
-  <img src="screenshots/plan-your-day.png" alt="Plan your day" width="49%">
+  <img src="screenshots/plan-your-day.png" alt="Plan your day" width="100%">
+</p>
+
+### Keep Context Close
+
+Write shared notes, keep project context beside the board, and manage user accounts from an admin-only workspace.
+
+<p>
   <img src="screenshots/take-notes.png" alt="Take notes" width="49%">
-</p>
-
-<p>
   <img src="screenshots/manage-accounts.png" alt="Manage accounts" width="49%">
+</p>
+
+### Make It Feel Like Yours
+
+Switch between light and dark modes, choose a preset theme, or create a custom look with your own colors, typography, and corner radius.
+
+<p>
   <img src="screenshots/enter-dark-mode.png" alt="Enter dark mode" width="49%">
+  <img src="screenshots/change-themes.png" alt="Change themes" width="49%">
 </p>
 
 <p>
-  <img src="screenshots/change-themes.png" alt="Change themes" width="49%">
-  <img src="screenshots/create-your-own-theme.png" alt="Create your own theme" width="49%">
+  <img src="screenshots/create-your-own-theme.png" alt="Create your own theme" width="100%">
 </p>
 
-## Showcase
+## What You Can Do
 
-- Projects: organize work into separate project spaces.
-- Kanban columns: track cards through board columns with a focused day-to-day workflow.
-- Action calendar: schedule and review actions in a calendar view.
-- Notes: keep project context beside the board and calendar.
-- Accounts and admin: protected login, admin-managed users, and profile password changes.
-- Themes and language: light/dark mode, theme presets, and English/Turkish UI text.
-- Realtime updates: Socket.IO keeps connected sessions in sync.
-- SQLite persistence: app data lives in a Docker volume at `/data`.
-- Docker deployment: build and run with the included `Dockerfile` and `docker-compose.yml`.
+Limestone brings the daily work surfaces of a small team into one app:
 
-## Quick Start
+- Plan projects with a focused kanban board.
+- Move cards through planned, ongoing, and finished work.
+- Schedule work on month, week, and day calendar views.
+- Keep shared notes next to the work they support.
+- Manage accounts from an admin-only workspace.
+- Personalize the app with light mode, dark mode, themes, fonts, radius, and custom colors.
+- Switch between English and Turkish.
+- Keep sessions in sync with realtime updates.
+- Store everything in a local SQLite database.
+
+## Why Self-Host It
+
+Limestone is for teams that want ownership and quiet infrastructure:
+
+- Your data lives on your server.
+- Deployment is a normal Docker Compose flow.
+- SQLite keeps persistence simple.
+- The app is easy to back up because the database lives in a Docker volume.
+- There is no external project-management account to maintain.
+
+## Good Fit
+
+Limestone works well for:
+
+- small teams;
+- agency and studio project tracking;
+- personal operations dashboards;
+- internal work calendars;
+- lightweight admin-managed collaboration;
+- teams that want a private tool on their own VPS.
+
+It is intentionally not trying to be a giant enterprise suite. The sweet spot is clear planning, shared context, and a pleasant daily workflow.
+
+## Self-Hosting
+
+Clone the repo, create an environment file, and start the container:
 
 ```bash
 git clone https://github.com/Bl4ckbamba/Limestone-Kanban-Calendar.git
@@ -82,9 +130,9 @@ That default password is temporary. After login, the app requires a password cha
 
 SQLite data is stored in the named Docker volume `limestone-data`, mounted inside the container at `/data`.
 
-## Upgrade
+## Updating
 
-Update the repository and rebuild the container:
+Pull the latest repo changes and rebuild:
 
 ```bash
 git pull
