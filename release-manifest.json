@@ -1,7 +1,7 @@
 {
-  "createdAt": "2026-05-11T16:33:38.486Z",
-  "gitCommit": "f4d0fd10f03d78500df12e7a4ee6d5cb5d04cdb5",
-  "gitBranch": "scout",
+  "createdAt": "2026-05-11T21:23:04.840Z",
+  "gitCommit": "17b5a365ec9692164ea7debafee7876106771bc3",
+  "gitBranch": "main",
   "node": "v24.14.1",
-  "version": "0.1.0"
+  "version": "1.0.0"
 }

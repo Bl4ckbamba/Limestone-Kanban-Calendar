@@ -33,6 +33,7 @@ const CARD_UPDATE_ACTION_COALESCE_SECONDS = 5 * 60;
 const LOGIN_BAN_ERROR = "Too many failed login attempts. Try again later.";
 const TEMPORARY_ADMIN_PASSWORD = "admin";
 const PASSWORD_CHANGE_REQUIRED_ERROR = "Password change required";
+const PRE_LOGIN_CSRF_TOKEN_MAX_AGE_MS = 60 * 60 * 1000;
 const devConnectSrc = ["'self'", "ws:", config.clientOrigin, `http://localhost:${config.port}`].filter(Boolean);
 
 app.set("trust proxy", config.trustProxy);
@@ -71,9 +72,16 @@ app.use(sessionMiddleware);
 
 io.engine.use(sessionMiddleware);
 
+app.use(["/auth", "/api"], (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+
 function getUserById(id) {
   return db
-    .prepare("SELECT id, username, is_admin, password_change_required, created_at FROM users WHERE id = ?")
+    .prepare(
+      "SELECT id, username, is_admin, password_change_required, deleted_at, created_at FROM users WHERE id = ? AND deleted_at IS NULL"
+    )
     .get(id);
 }
 
@@ -222,20 +230,54 @@ function ensureCsrfToken(req) {
   return req.session.csrfToken;
 }
 
+function csrfTokenDigest(value) {
+  return crypto.createHmac("sha256", config.sessionSecret).update(value).digest("base64url");
+}
+
+function createPreLoginCsrfToken(now = Date.now()) {
+  const timestamp = String(now);
+  const nonce = crypto.randomBytes(32).toString("base64url");
+  const payload = `${timestamp}.${nonce}`;
+  return `${payload}.${csrfTokenDigest(payload)}`;
+}
+
+function safeEqualText(left, right) {
+  const leftBuffer = Buffer.from(String(left || ""));
+  const rightBuffer = Buffer.from(String(right || ""));
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function isValidPreLoginCsrfToken(token, now = Date.now()) {
+  const parts = String(token || "").split(".");
+  if (parts.length !== 3) return false;
+
+  const [timestamp, nonce, digest] = parts;
+  if (!/^\d+$/.test(timestamp) || !/^[A-Za-z0-9_-]{32,}$/.test(nonce)) return false;
+
+  const createdAt = Number(timestamp);
+  if (!Number.isSafeInteger(createdAt) || createdAt > now || now - createdAt > PRE_LOGIN_CSRF_TOKEN_MAX_AGE_MS) {
+    return false;
+  }
+
+  return safeEqualText(csrfTokenDigest(`${timestamp}.${nonce}`), digest);
+}
+
 function validateCsrf(req, res, next) {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
     return next();
   }
 
-  const expected = ensureCsrfToken(req);
   const actual = String(req.get("x-csrf-token") || "");
-  const expectedBuffer = Buffer.from(expected);
-  const actualBuffer = Buffer.from(actual);
+  if (!req.session.userId && req.path === "/auth/login") {
+    if (isValidPreLoginCsrfToken(actual)) return next();
+    return res.status(403).json({ error: "Invalid CSRF token" });
+  }
 
-  if (
-    expectedBuffer.length !== actualBuffer.length ||
-    !crypto.timingSafeEqual(expectedBuffer, actualBuffer)
-  ) {
+  if (!req.session.userId) {
+    return res.status(403).json({ error: "Invalid CSRF token" });
+  }
+
+  if (!safeEqualText(ensureCsrfToken(req), actual)) {
     return res.status(403).json({ error: "Invalid CSRF token" });
   }
 
@@ -250,6 +292,63 @@ function asyncRoute(handler) {
 
 function cleanText(value, maxLength) {
   return String(value || "").trim().slice(0, maxLength);
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseJsonObject(value, fallback = {}) {
+  if (!value) return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    return isPlainObject(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function mergeJsonPatch(base, patch) {
+  if (!isPlainObject(patch)) return base;
+  const source = isPlainObject(base) ? base : {};
+  const merged = { ...source };
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
+    if (isPlainObject(value) && isPlainObject(source[key])) {
+      merged[key] = mergeJsonPatch(source[key], value);
+    } else {
+      merged[key] = value;
+    }
+  }
+
+  return merged;
+}
+
+function userPreferences(userId) {
+  const row = db.prepare("SELECT preferences_json FROM user_preferences WHERE user_id = ?").get(userId);
+  return parseJsonObject(row?.preferences_json);
+}
+
+function saveUserPreferences(userId, preferences) {
+  const preferencesJson = JSON.stringify(isPlainObject(preferences) ? preferences : {});
+  if (Buffer.byteLength(preferencesJson, "utf8") > 100_000) {
+    const error = new Error("Preferences payload is too large");
+    error.status = 413;
+    throw error;
+  }
+
+  db.prepare(
+    `
+    INSERT INTO user_preferences (user_id, preferences_json, updated_at)
+    VALUES (?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(user_id) DO UPDATE SET
+      preferences_json = excluded.preferences_json,
+      updated_at = CURRENT_TIMESTAMP
+    `
+  ).run(userId, preferencesJson);
+
+  return userPreferences(userId);
 }
 
 function cleanHexColor(value, fallback = DEFAULT_PROJECT_COLOR) {
@@ -659,7 +758,7 @@ function emitProjectChanged(projectId) {
 }
 
 app.get("/auth/csrf", (req, res) => {
-  res.json({ csrfToken: ensureCsrfToken(req) });
+  res.json({ csrfToken: req.session.userId ? ensureCsrfToken(req) : createPreLoginCsrfToken() });
 });
 
 app.get("/auth/me", (req, res) => {
@@ -678,7 +777,7 @@ app.post(
 
     const username = cleanText(req.body.username, 40).toLowerCase();
     const password = String(req.body.password || "");
-    const user = db.prepare("SELECT * FROM users WHERE username = ?").get(username);
+    const user = db.prepare("SELECT * FROM users WHERE username = ? AND deleted_at IS NULL").get(username);
 
     if (!user || !(await argon2.verify(user.password_hash, password))) {
       recordFailedLogin(ip);
@@ -714,7 +813,7 @@ app.get("/api/users", requireAuth, requireAdmin, (req, res) => {
 
   const users = db
     .prepare(
-      "SELECT id, username, is_admin, password_change_required, created_at FROM users ORDER BY is_admin DESC, username ASC"
+      "SELECT id, username, is_admin, password_change_required, deleted_at, created_at FROM users WHERE deleted_at IS NULL ORDER BY is_admin DESC, username ASC"
     )
     .all();
   const safeUsers = users.filter(Boolean).map(serializeUser);
@@ -758,6 +857,20 @@ app.patch(
     }
   })
 );
+
+app.get("/api/preferences", requireAuth, (req, res) => {
+  res.json({ preferences: userPreferences(req.user.id) });
+});
+
+app.patch("/api/preferences", requireAuth, (req, res) => {
+  const patch = req.body?.preferences;
+  if (!isPlainObject(patch)) {
+    return res.status(400).json({ error: "Preferences must be an object" });
+  }
+
+  const nextPreferences = mergeJsonPatch(userPreferences(req.user.id), patch);
+  res.json({ preferences: saveUserPreferences(req.user.id, nextPreferences) });
+});
 
 app.use("/api", requireAuth, requireCompletedSetup);
 
@@ -830,6 +943,27 @@ app.patch(
     }
   })
 );
+
+app.delete("/api/users/:userId", requireAuth, requireAdmin, (req, res) => {
+  const targetUserId = Number(req.params.userId);
+  const targetUser = getUserById(targetUserId);
+  if (!targetUser) return res.status(404).json({ error: "Account not found" });
+  if (String(targetUserId) === String(req.user.id)) {
+    return res.status(400).json({ error: "You cannot delete your own account" });
+  }
+
+  if (targetUser.is_admin) {
+    const activeAdminCount = db
+      .prepare("SELECT COUNT(*) AS total FROM users WHERE is_admin = 1 AND deleted_at IS NULL")
+      .get().total;
+    if (activeAdminCount <= 1) {
+      return res.status(400).json({ error: "Cannot delete the last admin account" });
+    }
+  }
+
+  db.prepare("UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL").run(targetUserId);
+  res.status(204).end();
+});
 
 app.get("/api/projects", requireAuth, (req, res) => {
   const projects = db
@@ -1356,7 +1490,7 @@ app.use((error, req, res, next) => {
 });
 
 async function ensureAdminAccount() {
-  const adminCount = db.prepare("SELECT COUNT(*) AS total FROM users WHERE is_admin = 1").get().total;
+  const adminCount = db.prepare("SELECT COUNT(*) AS total FROM users WHERE is_admin = 1 AND deleted_at IS NULL").get().total;
   if (adminCount > 0) return;
 
   const username = cleanText(config.adminUsername, 40).toLowerCase();
@@ -1367,6 +1501,14 @@ async function ensureAdminAccount() {
   }
   const isTemporaryAdminPassword = password === TEMPORARY_ADMIN_PASSWORD;
 
+  if (config.isProduction && !password) {
+    throw new Error("ADMIN_PASSWORD must be set before creating the first production admin");
+  }
+
+  if (config.isProduction && isTemporaryAdminPassword) {
+    throw new Error("ADMIN_PASSWORD must be set to a non-default value before creating the first production admin");
+  }
+
   if (!isTemporaryAdminPassword && !validatePassword(password)) {
     throw new Error("ADMIN_PASSWORD must be at least 10 characters");
   }
@@ -1375,7 +1517,7 @@ async function ensureAdminAccount() {
   const existing = db.prepare("SELECT id FROM users WHERE username = ?").get(username);
 
   if (existing) {
-    db.prepare("UPDATE users SET password_hash = ?, is_admin = 1, password_change_required = ? WHERE id = ?").run(
+    db.prepare("UPDATE users SET password_hash = ?, is_admin = 1, password_change_required = ?, deleted_at = NULL WHERE id = ?").run(
       passwordHash,
       isTemporaryAdminPassword ? 1 : 0,
       existing.id

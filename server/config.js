@@ -57,7 +57,7 @@ export const config = {
   sessionSecret: process.env.SESSION_SECRET || (isProduction ? "" : "dev-session-secret-change-me"),
   sessionCookieSecure: parseSessionCookieSecure(process.env.SESSION_COOKIE_SECURE),
   adminUsername: process.env.ADMIN_USERNAME || "admin",
-  adminPassword: process.env.ADMIN_PASSWORD || "admin",
+  adminPassword: process.env.ADMIN_PASSWORD || (isProduction ? "" : "admin"),
   clientOrigin: process.env.CLIENT_ORIGIN || (isProduction ? undefined : "http://localhost:3000"),
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   loginBanAttemptLimit: readIntegerEnv("LOGIN_BAN_ATTEMPT_LIMIT", DEFAULT_LOGIN_BAN_ATTEMPT_LIMIT, { min: 1 }),

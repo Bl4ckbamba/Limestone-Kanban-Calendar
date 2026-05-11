@@ -17,6 +17,7 @@ db.exec(`
     password_hash TEXT NOT NULL,
     is_admin INTEGER NOT NULL DEFAULT 0,
     password_change_required INTEGER NOT NULL DEFAULT 0,
+    deleted_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -27,6 +28,12 @@ db.exec(`
     banned_at TEXT,
     banned_until TEXT,
     last_failed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    preferences_json TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS projects (
@@ -108,6 +115,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notes_updated_at ON notes(updated_at);
   CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions(expire);
   CREATE INDEX IF NOT EXISTS idx_login_ip_attempts_banned ON login_ip_attempts(banned_at);
+  CREATE INDEX IF NOT EXISTS idx_user_preferences_updated ON user_preferences(updated_at);
 `);
 
 function hasColumn(table, column) {
@@ -181,6 +189,10 @@ if (!hasColumn("users", "password_change_required")) {
   db.exec("ALTER TABLE users ADD COLUMN password_change_required INTEGER NOT NULL DEFAULT 0");
 }
 
+if (!hasColumn("users", "deleted_at")) {
+  db.exec("ALTER TABLE users ADD COLUMN deleted_at TEXT");
+}
+
 if (!hasColumn("projects", "color")) {
   db.exec("ALTER TABLE projects ADD COLUMN color TEXT");
 }
@@ -225,6 +237,7 @@ export function serializeUser(row) {
     username: row.username,
     isAdmin: Boolean(row.is_admin),
     mustChangePassword: Boolean(row.password_change_required),
+    deletedAt: row.deleted_at || null,
     createdAt: row.created_at
   };
 }

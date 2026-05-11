@@ -94,7 +94,13 @@ cd Limestone-Kanban-Calendar
 cp release.env.example .env
 ```
 
-Edit `.env` before first start, especially `SESSION_SECRET`. Then run:
+Edit `.env` before first start:
+
+- `SESSION_SECRET`: set a long random value.
+- `ADMIN_PASSWORD`: set a strong first admin password with at least 10 characters.
+- `TRUST_PROXY`: set to `1` only when the container is reachable exclusively through a trusted reverse proxy.
+
+Then run:
 
 ```bash
 docker compose --env-file .env up -d --build
@@ -106,13 +112,9 @@ Open `http://your-server:3000` unless you changed `LIMESTONE_PORT`.
 
 When the database is empty, Limestone creates the first admin account automatically.
 
-Default credentials:
-
-```text
-admin / admin
-```
-
-That default password is temporary. After login, the app requires a password change before normal use. If you set a custom `ADMIN_PASSWORD` before first startup, it must be at least 10 characters and the forced-change flag is not applied.
+Production startup requires `ADMIN_PASSWORD` before the first admin can be
+created. The development default `admin` password is refused in production, so
+set a real password in `.env` before starting the container.
 
 ## Configuration
 
@@ -121,9 +123,9 @@ That default password is temporary. After login, the app requires a password cha
 | `SESSION_SECRET` | none | Required in production. Use a long random value. |
 | `SESSION_COOKIE_SECURE` | `auto` | Session cookie secure mode. Use `auto` behind trusted HTTPS proxies, `true` for HTTPS-only deployments, or `false` only for direct HTTP/local checks. |
 | `ADMIN_USERNAME` | `admin` | Initial admin username when no admin exists. |
-| `ADMIN_PASSWORD` | `admin` | Initial admin password when no admin exists. The default forces a password change. Custom values must be at least 10 characters. |
+| `ADMIN_PASSWORD` | none | Required before first production startup. Must be set to a non-default value with at least 10 characters. |
 | `LIMESTONE_PORT` | `3000` | Host port exposed by Docker Compose. |
-| `TRUST_PROXY` | `1` | Express trust proxy setting. Use deliberately when behind a trusted reverse proxy. Set `false` when directly exposed without a proxy. |
+| `TRUST_PROXY` | `false` | Express trust proxy setting. Use deliberately when behind a trusted reverse proxy, for example `1` for one proxy hop. |
 | `LOGIN_BAN_ATTEMPT_LIMIT` | `15` | Failed login attempts allowed during the rolling window. |
 | `LOGIN_BAN_WINDOW_MS` | `900000` | Rolling window for counting failed login attempts, in milliseconds. |
 | `LOGIN_BAN_DURATION_MS` | `900000` | Length of an IP login ban, in milliseconds. |
