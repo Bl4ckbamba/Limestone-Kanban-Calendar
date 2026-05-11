@@ -2,6 +2,30 @@
 
 Limestone is a self-hosted kanban and calendar app for small teams and personal operations. This public repository contains the Docker-ready runtime package: the built frontend, the Node/Express server, SQLite persistence, and the files needed to clone, configure, and run it on a VPS.
 
+## Screenshots
+
+![Organize your tasks](screenshots/organize-your-tasks.png)
+
+<p>
+  <img src="screenshots/plan-your-month.png" alt="Plan your month" width="49%">
+  <img src="screenshots/plan-your-week.png" alt="Plan your week" width="49%">
+</p>
+
+<p>
+  <img src="screenshots/plan-your-day.png" alt="Plan your day" width="49%">
+  <img src="screenshots/take-notes.png" alt="Take notes" width="49%">
+</p>
+
+<p>
+  <img src="screenshots/manage-accounts.png" alt="Manage accounts" width="49%">
+  <img src="screenshots/enter-dark-mode.png" alt="Enter dark mode" width="49%">
+</p>
+
+<p>
+  <img src="screenshots/change-themes.png" alt="Change themes" width="49%">
+  <img src="screenshots/create-your-own-theme.png" alt="Create your own theme" width="49%">
+</p>
+
 ## Showcase
 
 - Projects: organize work into separate project spaces.
