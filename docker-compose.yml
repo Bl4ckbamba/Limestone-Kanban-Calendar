@@ -1,0 +1,24 @@
+services:
+  limestone:
+    build: .
+    image: limestone:0.1.0
+    restart: unless-stopped
+    ports:
+      - "${LIMESTONE_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_PATH: /data/limestone.sqlite
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-auto}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      LOGIN_BAN_ATTEMPT_LIMIT: ${LOGIN_BAN_ATTEMPT_LIMIT:-15}
+      LOGIN_BAN_WINDOW_MS: ${LOGIN_BAN_WINDOW_MS:-900000}
+      LOGIN_BAN_DURATION_MS: ${LOGIN_BAN_DURATION_MS:-900000}
+    volumes:
+      - limestone-data:/data
+
+volumes:
+  limestone-data:

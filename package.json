@@ -1,0 +1,39 @@
+{
+  "name": "limestone",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "PORT=${API_PORT:-3001} CLIENT_ORIGIN=${CLIENT_ORIGIN:-http://localhost:3000} NODE_ENV=development nodemon --watch server --ext js,mjs,cjs,json server/index.js",
+    "dev:client": "API_PORT=${API_PORT:-3001} vite --host 0.0.0.0 --port ${CLIENT_PORT:-3000}",
+    "build": "vite build",
+    "postbuild": "node scripts/verify-public-login-boundary.mjs",
+    "verify:protected-boundary": "node scripts/verify-public-login-boundary.mjs",
+    "release": "node scripts/package-release.mjs",
+    "serve:local": "SERVE_DIST=1 NODE_ENV=development node server/index.js",
+    "start": "NODE_ENV=production node server/index.js",
+    "check": "npm run build"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "argon2": "^0.44.0",
+    "better-sqlite3": "^12.5.0",
+    "connect": "^3.7.0",
+    "express": "^5.2.1",
+    "express-session": "^1.18.2",
+    "helmet": "^8.1.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.11",
+    "postcss": "^8.5.10",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tailwindcss": "^3.4.14",
+    "vite": "^7.2.7"
+  }
+}

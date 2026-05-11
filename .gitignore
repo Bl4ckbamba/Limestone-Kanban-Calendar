@@ -1,0 +1,13 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+node_modules/
+npm-debug.log*
+data/
+logs/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+docker-compose.override.yml
