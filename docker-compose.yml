@@ -1,7 +1,7 @@
 services:
   limestone:
     build: .
-    image: limestone:1.0.0
+    image: limestone:1.0.1
     restart: unless-stopped
     ports:
       - "${LIMESTONE_PORT:-3000}:3000"
